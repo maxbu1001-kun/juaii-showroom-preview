@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Product } from './catalog'
+import { visitorFactFields, type Product } from './catalog'
 
 export function FactCard({
   product,
@@ -27,12 +27,12 @@ export function FactCard({
         </button>
       </div>
       <h2 id="fact-card-title">{product.name}</h2>
-      <p className="fact-note">Geometric stand-in. Table values are placeholders.</p>
+      <p className="fact-note">Geometric stand-in. Facts are the visitor catalog.</p>
       <dl className="fact-list">
-        {product.facts.map((fact) => (
-          <div key={fact.label} className="fact-row">
-            <dt>{fact.label}</dt>
-            <dd>{fact.value}</dd>
+        {visitorFactFields.map((field) => (
+          <div key={field.key} className="fact-row">
+            <dt>{field.label}</dt>
+            <dd>{product[field.key].en}</dd>
           </div>
         ))}
       </dl>
