@@ -1,1 +1,1 @@
-Application source; the React Three Fiber scene will be added here later.
+Showroom scene, hotspots, and fact cards. Draco GLB loading lives in `showroom/ProductModel.tsx`.
