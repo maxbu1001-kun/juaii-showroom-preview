@@ -102,10 +102,12 @@ function setCursor(cursor: string) {
 }
 
 function Hotspot({ active }: { active: boolean }) {
+  const inner = active ? 0.048 : 0.056
+  const outer = active ? 0.086 : 0.074
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[active ? 0.046 : 0.056, 0.074, 48]} />
-      <meshBasicMaterial color={active ? '#2a2826' : '#6a655f'} toneMapped={false} />
+      <ringGeometry args={[inner, outer, active ? 64 : 48]} />
+      <meshBasicMaterial color={active ? '#5e5a55' : '#6a655f'} toneMapped={false} />
     </mesh>
   )
 }
