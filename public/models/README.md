@@ -1,1 +1,1 @@
-Draco-compressed GLB models live here (for example j03-01.glb, j02-01.glb).
+Draco-compressed GLB models live here (`j03-01.glb`, `j02-01.glb`). Until those files exist, the scene uses geometric stand-ins. Set `modelFile` on the product in `src/showroom/catalog.ts` to the filename. Models should be in meters, origin at the base center. The Draco decoder is loaded from `DRACO_DECODER_PATH` in `src/showroom/draco.ts` only when a GLB is requested.
