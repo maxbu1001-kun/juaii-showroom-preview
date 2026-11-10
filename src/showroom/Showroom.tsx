@@ -3,6 +3,7 @@ import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, ty
 import { findProduct, products } from './catalog'
 import { onCardClose, onHotspotOpen, subscribeShowroomEvents, type ProductId, type ShowroomHooks } from './events'
 import { FactCard } from './FactCard'
+import { playGuideClip, stopGuideClip, subscribeGuideAudio, type GuideAudioState } from './guideAudio'
 import { ShowroomScene } from './Scene'
 
 type BoundaryProps = { children: ReactNode; fallback: ReactNode }
@@ -46,37 +47,57 @@ export function Showroom({ onHotspotOpen: onHotspotOpenProp, onCardClose: onCard
   const [openId, setOpenId] = useState<ProductId | null>(null)
   const openIdRef = useRef<ProductId | null>(null)
   const [webgl] = useState(hasWebGL)
+  const [guide, setGuide] = useState<GuideAudioState>({
+    clip: null,
+    playing: false,
+    autoplayBlocked: false,
+  })
+
+  useEffect(() => subscribeGuideAudio(setGuide), [])
 
   useEffect(() => {
     return subscribeShowroomEvents({
-      onHotspotOpen: (productId) => hooksRef.current.onHotspotOpen?.(productId),
-      onCardClose: (productId) => hooksRef.current.onCardClose?.(productId),
+      onHotspotOpen: (productId) => {
+        hooksRef.current.onHotspotOpen?.(productId)
+        playGuideClip(productId)
+      },
+      onCardClose: (productId) => {
+        hooksRef.current.onCardClose?.(productId)
+        stopGuideClip()
+      },
     })
+  }, [])
+
+  useEffect(() => {
+    playGuideClip('welcome')
+    return () => stopGuideClip()
+  }, [])
+
+  const dismissCard = useCallback((productId: ProductId) => {
+    openIdRef.current = null
+    setOpenId(null)
+    onCardClose(productId)
+    playGuideClip('close')
+    rootRef.current?.focus()
   }, [])
 
   const closeCard = useCallback(() => {
     const current = openIdRef.current
     if (!current) return
-    openIdRef.current = null
-    setOpenId(null)
-    onCardClose(current)
-    rootRef.current?.focus()
-  }, [])
+    dismissCard(current)
+  }, [dismissCard])
 
   const openProduct = useCallback((productId: ProductId) => {
     const current = openIdRef.current
     if (current === productId) {
-      openIdRef.current = null
-      setOpenId(null)
-      onCardClose(productId)
-      rootRef.current?.focus()
+      dismissCard(productId)
       return
     }
     if (current) onCardClose(current)
     openIdRef.current = productId
     setOpenId(productId)
     onHotspotOpen(productId)
-  }, [])
+  }, [dismissCard])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -108,11 +129,43 @@ export function Showroom({ onHotspotOpen: onHotspotOpenProp, onCardClose: onCard
       className="showroom"
       tabIndex={-1}
       data-card-open={openProductRecord ? 'true' : 'false'}
+      data-guide-clip={guide.clip ?? 'none'}
+      data-guide-playing={guide.playing ? 'true' : 'false'}
+      data-guide-blocked={guide.autoplayBlocked ? 'true' : 'false'}
     >
       <header className="brand">
         <h1>JUΛII</h1>
         <p>具和安</p>
       </header>
+      <div className="guide">
+        <button
+          type="button"
+          aria-pressed={guide.clip === 'welcome'}
+          onClick={() => {
+            if (guide.clip === 'welcome') stopGuideClip()
+            else playGuideClip('welcome')
+          }}
+        >
+          {guide.autoplayBlocked && guide.clip !== 'welcome' ? 'Play welcome' : 'Welcome'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={guide.clip === 'close'}
+          onClick={() => {
+            if (guide.clip === 'close') stopGuideClip()
+            else playGuideClip('close')
+          }}
+        >
+          Closing note
+        </button>
+        <p className="sr-only" aria-live="polite">
+          {guide.clip
+            ? `Playing ${guide.clip}`
+            : guide.autoplayBlocked
+              ? 'Play welcome to start the guide'
+              : ''}
+        </p>
+      </div>
       {webgl ? (
         <CanvasErrorBoundary fallback={fallback}>
           <Canvas
@@ -126,7 +179,7 @@ export function Showroom({ onHotspotOpen: onHotspotOpenProp, onCardClose: onCard
               powerPreference: 'high-performance',
               failIfMajorPerformanceCaveat: false,
             }}
-            aria-label="JUΛII showroom corner. Drag to look around. Tap a ring to read J03-01 or J02-01."
+            aria-label="JUΛII showroom corner. Drag to look around. Tap a ring to read and hear J03-01 or J02-01."
           >
             <ShowroomScene activeId={openId} onOpen={openProduct} />
           </Canvas>
@@ -134,7 +187,11 @@ export function Showroom({ onHotspotOpen: onHotspotOpenProp, onCardClose: onCard
       ) : (
         fallback
       )}
-      <p className="hint">Drag to look. Tap a ring for the fact card.</p>
+      <p className="hint">
+        {guide.autoplayBlocked
+          ? 'Press Play welcome to start. Drag to look. Tap a ring for facts and the guide.'
+          : 'Drag to look. Tap a ring for facts and the guide.'}
+      </p>
       {openProductRecord ? <FactCard product={openProductRecord} onClose={closeCard} /> : null}
     </div>
   )
